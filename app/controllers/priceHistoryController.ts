@@ -6,32 +6,18 @@ interface FilterConditions {
   menuItem?: Types.ObjectId;
   oldPrice?: number;
   newPrice?: number;
-  changeBy?: Types.ObjectId;
-  changeDate?:
-    | {
-        $gte?: Date;
-        $lte?: Date;
-      }
-    | Date;
+  changedBy?: Types.ObjectId;
+  changeDate?: {
+    $gte?: Date;
+    $lte?: Date;
+  };
 }
 
 /**
  * GET api/priceHistory
- * Retrieve all price's history with optional filtering by menuItem, old price, new price, change by and change date
- *
- * @param req - Express Request object with query
- * @param res - Express Response object
- *
- * Query Parameters:
- *  - menuItem: filter by menuItem id
- *  - oldPrice: filter by old price
- *  - newPrice: filter by new price
- *  - changeBy: filter by change by (userId)
- *
- *  @returns JSON response with array of menu items or error message
+ * Retrieve all price history with optional filtering
  */
-
-export const getAllPriceHistorys = async (
+export const getAllPriceHistories = async (
   req: Request,
   res: Response
 ): Promise<void> => {
@@ -40,27 +26,30 @@ export const getAllPriceHistorys = async (
       menuItem,
       oldPrice,
       newPrice,
-      changeBy,
-      changeDate,
+      changedBy,
       dateFrom,
       dateTo,
+      specificDate,
     } = req.query;
 
     const filter: FilterConditions = {};
 
+    // MenuItem filter
     if (menuItem && Types.ObjectId.isValid(menuItem as string)) {
       filter.menuItem = new Types.ObjectId(menuItem as string);
     }
 
-    if (changeBy && Types.ObjectId.isValid(changeBy as string)) {
-      filter.changeBy = new Types.ObjectId(changeBy as string);
+    // ChangedBy filter
+    if (changedBy && Types.ObjectId.isValid(changedBy as string)) {
+      filter.changedBy = new Types.ObjectId(changedBy as string);
     }
 
+    // Price filters
     if (oldPrice) filter.oldPrice = Number(oldPrice);
-
     if (newPrice) filter.newPrice = Number(newPrice);
 
-    if (changeDate) {
+    // Date filters
+    if (dateFrom || dateTo) {
       filter.changeDate = {};
       if (dateFrom) {
         filter.changeDate.$gte = new Date(dateFrom as string);
@@ -68,17 +57,24 @@ export const getAllPriceHistorys = async (
       if (dateTo) {
         filter.changeDate.$lte = new Date(dateTo as string);
       }
-    } else if (changeDate) {
-      const queryDate = new Date(changeDate as string);
-      const startDay = new Date(queryDate.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(queryDate.setHours(24, 59, 59, 999));
-      filter.changeDate = { $gte: startDay, $lte: endOfDay };
+    } else if (specificDate) {
+      // Filter for a specific date (whole day)
+      const queryDate = new Date(specificDate as string);
+      const startOfDay = new Date(queryDate);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(queryDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      filter.changeDate = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
     }
 
-    const priceHistory = await PriceHistory.find(filter).populate(
-      "menuItem",
-      "name price category"
-    );
+    const priceHistory = await PriceHistory.find(filter)
+      .populate("menuItem", "name price category")
+      .populate("changedBy", "name email"); // Also populate changedBy
 
     res.json({
       success: true,
@@ -95,7 +91,11 @@ export const getAllPriceHistorys = async (
   }
 };
 
-export const getAllPriceHistorysById = async (
+/**
+ * GET /api/priceHistory/:id
+ * Retrieve a single priceHistory by ID
+ */
+export const getPriceHistoryById = async (
   req: Request,
   res: Response
 ): Promise<void> => {
@@ -103,15 +103,14 @@ export const getAllPriceHistorysById = async (
     if (!Types.ObjectId.isValid(req.params.id)) {
       res.status(400).json({
         success: false,
-        message: "Invalid Price History Format",
+        message: "Invalid Price History ID Format",
       });
       return;
     }
 
-    const priceHistory = await PriceHistory.findById(req.params.id).populate(
-      "menuItem",
-      "name price category description"
-    );
+    const priceHistory = await PriceHistory.findById(req.params.id)
+      .populate("menuItem", "name price category description")
+      .populate("changedBy", "name email"); // Also populate changedBy
 
     if (!priceHistory) {
       res.status(404).json({

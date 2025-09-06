@@ -6,7 +6,9 @@
     "dev": "nodemon app/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "lint": "eslint"
+    "lint": "eslint",
+    "insert-menu": "tsx app/scripts/insertMenuItem.ts",
+    "seed-data": "tsx app/scripts/insertMenuItem.ts"
   },
   "type": "commonjs",
   "dependencies": {
@@ -44,6 +46,7 @@
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
 }

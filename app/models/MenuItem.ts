@@ -51,3 +51,5 @@ menuItemSchema.index({ name: "text", description: "text" });
 menuItemSchema.index({ category: 1, availability: 1 });
 
 export default mongoose.model<IMenuItem>("MenuItem", menuItemSchema);
+
+

@@ -16,6 +16,23 @@ interface FilterConditions {
 }
 
 // getAllOrders API endpoint
+/**
+ * GET api/order
+ * Retrieve all Order with optional filtering with status, customer, orderType, startDate, endDate, minAmount, maxAmount
+ *
+ * @param req Express - Request object with query
+ * @param res Express - Response object
+ *
+ * query parameter:
+ * - status: filter by status type
+ * - customer: filter by customer object
+ * - orderType: filter by order types
+ * - startDate: filter by start order date
+ * - endDate: filter by end date
+ * - minAmount: filter by min amount of order
+ * - maxAmount: filter by max amount of order
+ */
+
 export const getAllOrders = async (
   req: Request,
   res: Response
