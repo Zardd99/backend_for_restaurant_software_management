@@ -17,7 +17,7 @@ export interface IMenuItem extends Document {
 
 const menuItemSchema: Schema = new Schema(
   {
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true },
     description: { type: String, required: true },
     price: { type: Number, required: true },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
@@ -51,5 +51,3 @@ menuItemSchema.index({ name: "text", description: "text" });
 menuItemSchema.index({ category: 1, availability: 1 });
 
 export default mongoose.model<IMenuItem>("MenuItem", menuItemSchema);
-
-
