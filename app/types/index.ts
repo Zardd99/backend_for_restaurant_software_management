@@ -1,4 +1,4 @@
-import { Document, Types } from "mongoose";
+import mongoose, { Document, Types } from "mongoose";
 
 export interface IUser extends Document {
   name: string;
@@ -18,21 +18,27 @@ export interface ICategory extends Document {
   updatedAt: Date;
 }
 
+export interface IngredientReference {
+  ingredient: mongoose.Types.ObjectId;
+  quantity: number;
+}
+
 export interface IMenuItem extends Document {
   name: string;
   description: string;
   price: number;
-  category: Types.ObjectId;
-  image: string;
-  ingredients: string[];
+  category: mongoose.Types.ObjectId;
+  image: string; // Changed from imageUrl to image
+  ingredientReferences: IngredientReference[]; // Replaced ingredients with ingredientReferences
   dietaryTags: string[];
-  availability: boolean;
+  availability: boolean; // Changed from isAvailable to availability
   preparationTime: number;
-  chefSpecial: boolean;
-  averageRating: number;
-  reviewCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+  chefSpecial?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  [key: string]: any;
 }
 
 export interface IReview extends Document {

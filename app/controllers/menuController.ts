@@ -5,17 +5,19 @@ interface FilterConditions {
   category?: string;
   dietaryTags?: string;
   availability?: boolean;
+  chefSpecial?: boolean;
   $text?: { $search: string };
 }
 
 /**
  * GET /api/menu
- * Retrieve all menu items with optional filtering by category, dietary tags, availability, and search text
+ * Retrieve all menu items with optional filtering by chefSpecial, category, dietary tags, availability, and search text
  *
  * @param req - Express Request object with query parameters
  * @param res - Express Response object
  *
  * Query Parameters:
+ * - chefSpecial: Filter by chef special status (true/false) , menu?chefSpecial=true
  * - category: Filter by category name
  * - dietary: Filter by dietary tags
  * - search: Text search across menu item names and descriptions
@@ -28,12 +30,16 @@ export const getAllMenu = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { category, dietary, search, available } = req.query;
+    const { category, dietary, search, available, chefSpecial } = req.query;
     const filter: FilterConditions = {};
 
     if (category) filter.category = category as string;
     if (dietary) filter.dietaryTags = dietary as string;
     if (available !== undefined) filter.availability = available === "true";
+
+    if (chefSpecial !== undefined) {
+      filter.chefSpecial = chefSpecial === "true";
+    }
 
     if (search) {
       filter.$text = { $search: search as string };
@@ -61,6 +67,7 @@ export const getAllMenu = async (
  *
  * @returns JSON response with menu item details or error message
  */
+
 export const getMenuId = async (req: Request, res: Response): Promise<void> => {
   try {
     const menuItem = await MenuItem.findById(req.params.id).populate(

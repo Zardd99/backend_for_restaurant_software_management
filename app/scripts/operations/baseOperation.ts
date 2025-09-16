@@ -1,6 +1,7 @@
 import { connectDB, disconnectDB } from "../config/db";
 import { Logger } from "../utils/logger";
 import { handleError } from "../utils/errorHandler";
+import { MenuItemData } from "../types";
 
 export abstract class BaseOperation {
   protected logger: Logger;
@@ -26,18 +27,21 @@ export abstract class BaseOperation {
     }
   }
 
-  protected loadData(data: any, defaultData: any[]): any[] {
+  protected loadData(
+    data: string,
+    defaultData: MenuItemData[]
+  ): MenuItemData[] {
     if (data) {
       try {
         return JSON.parse(data);
-      } catch (error) {
-        throw new Error("Invalid JSON data provided");
+      } catch (error: unknown) {
+        throw new Error("Invalid JSON data provided", error as Error);
       }
     }
     return defaultData;
   }
 
-  protected async loadDataFromFile(filePath: string): Promise<any[]> {
+  protected async loadDataFromFile(filePath: string): Promise<MenuItemData[]> {
     const fs = await import("fs/promises");
     try {
       const data = await fs.readFile(filePath, "utf-8");

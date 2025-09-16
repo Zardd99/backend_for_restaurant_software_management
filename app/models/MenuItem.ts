@@ -6,7 +6,10 @@ export interface IMenuItem extends Document {
   price: number;
   category: Types.ObjectId;
   image: string;
-  ingredients: string[];
+  ingredientReferences: {
+    ingredient: Types.ObjectId;
+    quantity: number;
+  }[];
   dietaryTags: string[];
   availability: boolean;
   preparationTime: number;
@@ -22,7 +25,16 @@ const menuItemSchema: Schema = new Schema(
     price: { type: Number, required: true },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
     image: { type: String, default: "" },
-    ingredients: [{ type: String }],
+    ingredientReferences: [
+      {
+        ingredient: {
+          type: Schema.Types.ObjectId,
+          ref: "Ingredient", // Reference to an Ingredient model
+          required: true,
+        },
+        quantity: { type: Number, required: true, min: 0 },
+      },
+    ],
     dietaryTags: [
       {
         type: String,

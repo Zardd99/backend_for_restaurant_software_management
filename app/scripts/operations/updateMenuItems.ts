@@ -1,8 +1,8 @@
 import { BaseOperation } from "./baseOperation";
 import MenuItem from "../../models/MenuItem";
 import { validateMenuItems } from "../utils/validation";
-import { MenuItemData } from "../types";
-import mongoose from "mongoose";
+import { MenuItemData } from "../types/index";
+import { menuItemsData } from "../data/menuItems";
 
 export const updateMenuItems = async (
   filePath?: string,
@@ -24,7 +24,10 @@ class UpdateOperation extends BaseOperation {
       if (filePath) {
         data = await this.loadDataFromFile(filePath);
       } else {
-        data = this.loadData(dataString, []);
+        data = this.loadData(
+          dataString as string,
+          menuItemsData as MenuItemData[]
+        );
       }
 
       if (data.length === 0) {
@@ -35,19 +38,20 @@ class UpdateOperation extends BaseOperation {
       validateMenuItems(data);
 
       const updateOperations = data.map(async (item) => {
-        if (!item._id) {
-          throw new Error("Missing _id field for update operation");
+        // dont use _id here it not in the document
+        if (!item.name) {
+          throw new Error("Missing name field for update operation");
         }
 
-        const { _id, ...updateData } = item;
+        const { name, ...updateData } = item;
         const result = await MenuItem.findByIdAndUpdate(
-          _id,
+          name,
           { $set: updateData },
           { new: true, runValidators: true }
         );
 
         if (!result) {
-          this.logger.warn(`Item with ID ${_id} not found`);
+          this.logger.warn(`Item with ID ${name} not found`);
         }
 
         return result;

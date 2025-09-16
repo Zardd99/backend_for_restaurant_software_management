@@ -15,7 +15,6 @@ interface FilterConditions {
   };
 }
 
-// getAllOrders API endpoint
 /**
  * GET api/order
  * Retrieve all Order with optional filtering with status, customer, orderType, startDate, endDate, minAmount, maxAmount
@@ -29,8 +28,8 @@ interface FilterConditions {
  * - orderType: filter by order types
  * - startDate: filter by start order date
  * - endDate: filter by end date
- * - minAmount: filter by min amount of order
- * - maxAmount: filter by max amount of order
+ * - minAmount: filter by min amount of order's Price
+ * - maxAmount: filter by max amount of order's price
  */
 
 export const getAllOrders = async (
@@ -78,7 +77,14 @@ export const getAllOrders = async (
   }
 };
 
-// getOrderById API endpoint
+/**
+ * GET api/order/:id
+ * Retrieve all Order by id
+ *
+ * @param req Express - Request object with query
+ * @param res Express - Response object
+
+ */
 export const getOrderById = async (
   req: Request,
   res: Response
@@ -99,7 +105,17 @@ export const getOrderById = async (
   }
 };
 
-// createOrder API endpoint
+/**
+ * POST api/order
+ * Create a new Order
+ *
+ * Request body:
+ * - order: Partial order object with fields to create
+ *          
+ * Response:
+ * - Returns created review with populated data
+
+ */
 export const createOrder = async (
   req: Request,
   res: Response
@@ -119,7 +135,18 @@ export const createOrder = async (
   }
 };
 
-// updateOrder API endpoint
+/**
+ * PUT /api/order/:id
+ * Updates an existing review with validation
+ *
+ * URL Parameters:
+ * - id: Order ID to update
+ *
+ * Request Body:
+ * - order: Partial order object with fields to update
+ *
+ * Response: Returns updated order with populated data
+ */
 export const updateOrder = async (
   req: Request,
   res: Response
@@ -143,7 +170,15 @@ export const updateOrder = async (
   }
 };
 
-// deleteOrder API endpoint
+/**
+ * DELETE /api/order/:id
+ * Deletes a order by ID
+ *
+ * URL Parameters:
+ * - id: order ID to delete
+ *
+ * Response: Returns deleted review data
+ */
 export const deleteOrder = async (
   req: Request,
   res: Response

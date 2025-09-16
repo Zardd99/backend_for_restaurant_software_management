@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node", "express", "jsonwebtoken"],
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -23,6 +25,12 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/scripts/insertMenuItem.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "app/scripts/insertMenuItem.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

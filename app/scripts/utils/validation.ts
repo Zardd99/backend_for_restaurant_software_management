@@ -24,7 +24,7 @@ export function validateMenuItems(data: MenuItemData[]): void {
       throw new Error(`Item at index ${index} must have a valid category ID`);
     }
 
-    if (!Array.isArray(item.ingredients)) {
+    if (!Array.isArray(item.ingredientReferences)) {
       throw new Error(
         `Item at index ${index} must have an array of ingredients`
       );
@@ -36,7 +36,7 @@ export function validateMenuItems(data: MenuItemData[]): void {
       );
     }
 
-    if (typeof item.isAvailable !== "boolean") {
+    if (typeof item.availability !== "boolean") {
       throw new Error(
         `Item at index ${index} must have a valid isAvailable boolean`
       );

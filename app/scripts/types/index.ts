@@ -12,15 +12,20 @@ export interface ValidationError extends Error {
   };
 }
 
+export interface IngredientReference {
+  ingredient: mongoose.Types.ObjectId;
+  quantity: number;
+}
+
 export interface MenuItemData {
   name: string;
   description: string;
   price: number;
   category: mongoose.Types.ObjectId;
-  imageUrl: string;
-  ingredients: string[];
+  image: string; // Changed from imageUrl to image
+  ingredientReferences: IngredientReference[]; // Replaced ingredients with ingredientReferences
   dietaryTags: string[];
-  isAvailable: boolean;
+  availability: boolean; // Changed from isAvailable to availability
   preparationTime: number;
   chefSpecial?: boolean;
   averageRating?: number;
@@ -33,6 +38,6 @@ export interface MenuItemData {
 export interface OperationResult {
   success: boolean;
   message: string;
-  data?: any;
+  data?: any; // Changed from string to any to accommodate different data types
   error?: Error;
 }
