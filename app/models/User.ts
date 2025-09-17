@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -87,6 +88,15 @@ userSchema.methods.toJSON = function () {
   delete user.__v;
   return user;
 };
+
+// userSchema.methods.generateAuthToken = function () {
+//   const token = jwt.sign(
+//     { id: this._id, role: this.role },
+//     process.env.JWT_SECRET || "fallback_secret",
+//     { expiresIn: "30d" }
+//   );
+//   return token;
+// };
 
 // Static method to find user by email
 userSchema.statics.findByEmail = function (email: string) {

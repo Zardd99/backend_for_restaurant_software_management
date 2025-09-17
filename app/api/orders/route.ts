@@ -12,6 +12,11 @@ import { authenticate, authorize } from "../../middleware/auth";
 const router = express.Router();
 
 router.use(authenticate);
+router.post("/debug/order", (req, res) => {
+  console.log("Received order data:", req.body);
+  console.log("Headers:", req.headers);
+  res.json({ received: true, data: req.body });
+});
 
 // Role-based access
 router.get(
@@ -24,7 +29,12 @@ router.get(
   authorize("admin", "manager", "chef", "waiter", "cashier"),
   getOrderById
 );
-router.post("/", authorize("admin", "manager", "waiter"), createOrder);
+router.post(
+  "/",
+  authenticate,
+  authorize("admin", "manager", "waiter"),
+  createOrder
+);
 router.put("/:id", authorize("admin", "manager", "waiter"), updateOrder);
 router.delete("/:id", authorize("admin", "manager"), deleteOrder);
 router.patch(

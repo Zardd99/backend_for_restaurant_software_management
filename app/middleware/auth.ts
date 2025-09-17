@@ -6,6 +6,33 @@ export interface AuthRequest extends Request {
   user?: IUser;
 }
 
+export interface DecodedToken {
+  userId?: string;
+  id?: string;
+  role?: string;
+  iat?: number;
+  exp?: number;
+}
+
+export const authenticateWebSocket = (token: string): Promise<DecodedToken> => {
+  return new Promise((resolve, reject) => {
+    if (!token) {
+      reject(new Error("Authentication token required"));
+      return;
+    }
+
+    try {
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET!
+      ) as DecodedToken;
+      resolve(decoded);
+    } catch (error) {
+      reject(new Error("Invalid authentication token", { cause: error }));
+    }
+  });
+};
+
 export const authenticate = async (
   req: AuthRequest,
   res: Response,

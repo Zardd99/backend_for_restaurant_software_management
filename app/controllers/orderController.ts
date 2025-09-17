@@ -121,6 +121,8 @@ export const createOrder = async (
   res: Response
 ): Promise<void> => {
   try {
+    console.log("Creating order with data:", req.body); // Add this for debugging
+
     const order: IOrder = new Order(req.body);
     const savedOrder = await order.save();
 
@@ -130,8 +132,14 @@ export const createOrder = async (
     ]);
 
     res.status(201).json(savedOrder);
-  } catch (error) {
-    res.status(400).json({ message: "Error creating order", error });
+  } catch (error: unknown) {
+    console.error("Error creating order:", error);
+    res.status(400).json({
+      message: "Error creating order",
+      error: error instanceof Error ? error.message : String(error),
+      details:
+        error instanceof Error && "errors" in error ? error.errors : undefined,
+    });
   }
 };
 
@@ -214,7 +222,10 @@ export const updateOrderStatus = async (
     ];
 
     if (!validStatuses.includes(status)) {
-      res.status(400).json({ message: "Invalid status value" });
+      res.status(400).json({
+        message: "Invalid status value",
+        validStatuses,
+      });
       return;
     }
 
@@ -233,6 +244,10 @@ export const updateOrderStatus = async (
 
     res.json(order);
   } catch (error) {
-    res.status(400).json({ message: "Error updating order status", error });
+    console.error("Error updating order status:", error);
+    res.status(500).json({
+      message: "Error updating order status",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 };

@@ -11,7 +11,7 @@ interface RateLimitConfig {
 
 const defaultConfig: RateLimitConfig = {
   windowMs: 15 * 60 * 1000,
-  maxRequests: 100,
+  maxRequests: 10000,
   message: "too many request",
   skipFailedRequests: false,
 };

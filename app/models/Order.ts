@@ -48,7 +48,7 @@ const orderSchema: Schema = new Schema(
       ],
       default: "pending",
     },
-    customer: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    customer: { type: Schema.Types.ObjectId, ref: "User" },
     tableNumber: { type: Number, min: 1 },
     orderType: {
       type: String,
