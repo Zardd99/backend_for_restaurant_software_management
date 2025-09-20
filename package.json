@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon app/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/server.ts",
     "lint": "eslint",
     "insert-menu": "tsx app/scripts/insertMenuItem.ts",
     "seed-data": "tsx app/scripts/insertMenuItem.ts",
