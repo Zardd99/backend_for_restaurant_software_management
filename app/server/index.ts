@@ -1,263 +1,109 @@
-import { WebSocketServer, WebSocket } from "ws";
-import { parse } from "url";
-import { IncomingMessage } from "http";
-import { Server } from "http";
+import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
-import { authenticateWebSocket } from "../middleware/auth";
+import http from "http";
 
-interface DecodedToken {
-  userId?: string;
-  id?: string;
-  role?: string;
-  iat?: number;
-  exp?: number;
-}
+export function initWebSocketServer(server: http.Server) {
+  const io = new Server(server, {
+    cors: {
+      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      methods: ["GET", "POST"],
+    },
+  });
 
-interface WebSocketWithUser extends WebSocket {
-  user?: DecodedToken;
-  role?: "chef" | "waiter";
-  isAlive?: boolean;
-}
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id);
 
-const clients = {
-  chef: new Set<WebSocketWithUser>(),
-  waiter: new Set<WebSocketWithUser>(),
-};
+    // Handle authentication with proper type checking
+    const token = socket.handshake.query.token;
+    const role = socket.handshake.query.role;
 
-const heartbeatInterval = setInterval(() => {
-  for (const role of ["chef", "waiter"] as const) {
-    clients[role].forEach((ws) => {
-      if (!ws.isAlive) {
-        ws.terminate();
-        clients[role].delete(ws);
+    // Ensure token and role are strings, not arrays
+    const authToken = Array.isArray(token) ? token[0] : token;
+    const authRole = Array.isArray(role) ? role[0] : role;
+
+    if (!authToken || !authRole) {
+      console.log("Authentication failed: Missing token or role");
+      socket.disconnect();
+      return;
+    }
+
+    // Verify token
+    try {
+      const decoded = jwt.verify(authToken, process.env.JWT_SECRET!);
+      socket.data.user = decoded;
+      socket.data.role = authRole;
+      socket.data.previousRooms = [];
+
+      // Join room based on role
+      socket.join(authRole);
+      socket.data.previousRooms.push(authRole);
+      console.log(`Client ${socket.id} authenticated as ${authRole}`);
+    } catch (error) {
+      console.log("Authentication failed: Invalid token");
+      socket.disconnect();
+      return;
+    }
+
+    // Order created event (from waiters)
+    socket.on("order_created", (orderData) => {
+      // Verify sender is a waiter
+      if (socket.data.role !== "waiter") {
+        socket.emit("error", {
+          message: "Unauthorized: Only waiters can create orders",
+        });
         return;
       }
 
-      ws.isAlive = false;
-      ws.ping();
+      // Broadcast to all kitchen clients
+      io.to("chef").emit("order_created", orderData);
+      console.log(`Order ${orderData._id} created and broadcast to kitchen`);
     });
-  }
-}, 30000);
 
-export function initWebSocketServer(server: Server): WebSocketServer {
-  const wss = new WebSocketServer({
-    server,
-    path: "/ws",
-  });
+    // Order status update event (from chefs)
+    socket.on(
+      "order_status_update",
+      (data: { orderId: string; status: string }) => {
+        // Verify sender is a chef
+        if (socket.data.role !== "chef") {
+          socket.emit("error", {
+            message: "Unauthorized: Only chefs can update order status",
+          });
+          return;
+        }
 
-  wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
-    const typedWs = ws as WebSocketWithUser;
-    const { query } = parse(req.url || "", true);
-    const token = query.token as string;
-    const role = query.role as "chef" | "waiter";
-
-    // Validate token and role
-    if (!token) {
-      typedWs.close(1008, "Authentication token required");
-      return;
-    }
-
-    if (!role || !["chef", "waiter"].includes(role)) {
-      typedWs.close(1008, "Invalid role specified");
-      return;
-    }
-
-    try {
-      const decoded = await authenticateWebSocket(token);
-      typedWs.user = decoded;
-      typedWs.role = role;
-      typedWs.isAlive = true;
-
-      // Rest of the code remains the same
-    } catch (error: unknown) {
-      console.error("WebSocket authentication failed:", error);
-      typedWs.close(
-        1008,
-        error instanceof Error ? error.message : "Authentication failed"
-      );
-      return;
-    }
-
-    // Handle messages
-    typedWs.on("message", (data: Buffer) => {
-      try {
-        const message = JSON.parse(data.toString());
-        handleClientMessage(typedWs, message);
-      } catch (error) {
-        console.error("Error parsing message:", error);
-        typedWs.send(
-          JSON.stringify({
-            type: "error",
-            message: "Invalid message format",
-          })
-        );
+        // Broadcast to all waiter clients
+        io.to("waiter").emit("order_updated", data);
+        console.log(`Order ${data.orderId} status updated to ${data.status}`);
       }
-    });
-
-    // Handle pong responses (for heartbeat)
-    typedWs.on("pong", () => {
-      typedWs.isAlive = true;
-    });
-
-    // Handle disconnection
-    typedWs.on("close", (code, reason) => {
-      const role = typedWs.role;
-      if (role) {
-        clients[role].delete(typedWs);
-      }
-      console.log(
-        `Client disconnected: Code ${code}, Reason: ${reason.toString()}`
-      );
-    });
-
-    // Handle errors
-    typedWs.on("error", (error) => {
-      console.error("WebSocket error:", error);
-      const role = typedWs.role;
-      if (role) {
-        clients[role].delete(typedWs);
-      }
-    });
-  });
-
-  wss.on("close", () => {
-    clearInterval(heartbeatInterval);
-  });
-
-  return wss;
-}
-
-function handleOrderCreated(
-  ws: WebSocketWithUser,
-  message: any,
-  userId: string
-) {
-  const { order } = message;
-
-  if (!order) {
-    ws.send(
-      JSON.stringify({
-        type: "error",
-        message: "Missing order data in request",
-      })
     );
-    return;
-  }
 
-  console.log(`New order created: ${order._id} by ${userId}`);
+    // Set role event handler
+    socket.on("set_role", (newRole: string) => {
+      if (["chef", "waiter"].includes(newRole)) {
+        // Leave previous rooms
+        if (socket.data.previousRooms) {
+          socket.data.previousRooms.forEach((room: string) => {
+            socket.leave(room);
+          });
+        }
 
-  // Broadcast to all chef clients
-  broadcastToAll({
-    type: "order_created",
-    order,
-    createdBy: userId,
-    timestamp: new Date().toISOString(),
-  });
+        // Join new role room
+        socket.join(newRole);
+        socket.data.role = newRole;
+        socket.data.previousRooms = [newRole];
 
-  // Send confirmation to waiter
-  ws.send(
-    JSON.stringify({
-      type: "order_creation_confirmation",
-      orderId: order._id,
-      timestamp: new Date().toISOString(),
-    })
-  );
-}
-
-function handleClientMessage(ws: WebSocketWithUser, message: any) {
-  const { role, user } = ws;
-
-  if (!user || !role) {
-    ws.close(1008, "Client metadata not found");
-    return;
-  }
-
-  const userId = user.userId || user.id;
-  console.log(`Received message from ${role} (${userId}):`, message.type);
-
-  switch (message.type) {
-    case "order_status_update":
-      if (role === "chef") {
-        handleOrderStatusUpdate(ws, message, userId as string);
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message: "Only chef staff can update order status",
-          })
-        );
+        console.log(`Client ${socket.id} set role to ${newRole}`);
       }
-      break;
+    });
 
-    case "order_created":
-      handleOrderCreated(ws, message, userId as string);
-      break;
+    socket.on("disconnect", () => {
+      console.log("Client disconnected:", socket.id);
+    });
 
-    case "ping":
-      ws.send(JSON.stringify({ type: "pong" }));
-      break;
-
-    default:
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: `Unknown message type: ${message.type}`,
-        })
-      );
-  }
-}
-
-function handleOrderStatusUpdate(
-  ws: WebSocketWithUser,
-  message: any,
-  userId: string
-) {
-  const { orderId, status } = message;
-
-  if (!orderId || !status) {
-    ws.send(
-      JSON.stringify({
-        type: "error",
-        message: "Missing orderId or status in request",
-      })
-    );
-    return;
-  }
-
-  console.log(`Order status update: ${orderId} -> ${status} by ${userId}`);
-
-  // Broadcast to all clients
-  broadcastToAll({
-    type: "orders_updated",
-    orderId,
-    status,
-    updatedBy: userId,
-    timestamp: new Date().toISOString(),
+    socket.on("error", (error) => {
+      console.error("Socket error:", error);
+    });
   });
 
-  // Send confirmation
-  ws.send(
-    JSON.stringify({
-      type: "order_status_update_confirmation",
-      orderId,
-      status,
-      timestamp: new Date().toISOString(),
-    })
-  );
-}
-
-function broadcastToAll(message: any) {
-  const messageStr = JSON.stringify(message);
-
-  clients.chef.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(messageStr);
-    }
-  });
-
-  clients.waiter.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(messageStr);
-    }
-  });
+  return io;
 }
